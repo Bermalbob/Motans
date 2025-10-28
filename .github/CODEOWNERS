@@ -1,0 +1,5 @@
+# Require review from @Bermalbob for changes to core files
+# This assigns pull requests to the repository owner/team for review.
+
+# All code
+*    @Bermalbob
