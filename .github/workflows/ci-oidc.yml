@@ -3,10 +3,10 @@ name: CI (with OIDC example)
 # This workflow demonstrates two approaches for deployment:
 # 1) Use GitHub Secrets with Firebase service account JSON (existing flow)
 # 2) Use GCP Workload Identity Federation (OIDC) — recommended for production
-
+#
+# Trigger: manual only to avoid duplicate runs with the primary CI.
 on:
-  push:
-    branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   id-token: write # required for OIDC
@@ -36,26 +36,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Firebase Tools
-        run: npm ci -g firebase-tools
+        run: npm install -g firebase-tools
       - name: Write service account to disk (from secret)
         env:
           FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           echo "$FIREBASE_SA" > /tmp/firebase-sa.json
           chmod 600 /tmp/firebase-sa.json
-      - name: Deploy (uses firebase-tools)
+      - name: Deploy (service account JSON via ADC)
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
         run: |
-          npx firebase deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --token "$(cat /tmp/firebase-sa.json | jq -r .token 2>/dev/null || true)" || true
-        # Note: The firebase CLI typically expects a token or ADC. This step is a placeholder;
-        # adjust the deploy command to your needs (or use gcloud to impersonate the SA).
+          firebase --version
+          firebase deploy --only hosting --project "$FIREBASE_PROJECT_ID" --non-interactive
+        # Uses Application Default Credentials via GOOGLE_APPLICATION_CREDENTIALS
 
   # Option B (recommended): OIDC -> impersonate service account in GCP
   deploy-oidc:
     needs: build
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    # Guard until OIDC is configured: enable after setting the WIF provider & service account
+    if: github.ref == 'refs/heads/main' && false
     environment: production
     steps:
       - uses: actions/checkout@v4
@@ -73,15 +75,14 @@ jobs:
           project_id: ${{ secrets.FIREBASE_PROJECT_ID }}
 
       - name: Install Firebase Tools
-        run: npm ci -g firebase-tools
+        run: npm install -g firebase-tools
 
       - name: Deploy with gcloud/fb (OIDC)
         run: |
-          # After OIDC auth and setup-gcloud, you can run gcloud or firebase commands.
-          # Example (may require enabling APIs and appropriate IAM bindings):
-          # gcloud config set project ${{ secrets.FIREBASE_PROJECT_ID }}
-          # firebase deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
-          echo "<!-- Replace with actual deploy commands once OIDC is configured in GCP -->"
+          # After OIDC auth and setup-gcloud, ADC is available to Firebase CLI
+          gcloud config set project ${{ secrets.FIREBASE_PROJECT_ID }}
+          firebase --version
+          firebase deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --non-interactive
 
 # NOTES:
 # - Replace PROJECT_NUMBER, POOL_ID, PROVIDER_ID and SA_NAME@PROJECT_ID with values from your GCP setup.
