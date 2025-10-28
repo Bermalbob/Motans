@@ -1,0 +1,90 @@
+name: CI (with OIDC example)
+
+# This workflow demonstrates two approaches for deployment:
+# 1) Use GitHub Secrets with Firebase service account JSON (existing flow)
+# 2) Use GCP Workload Identity Federation (OIDC) — recommended for production
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  id-token: write # required for OIDC
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+      - name: Install
+        run: npm ci
+      - name: Build
+        run: npm run build
+
+  # Option A: deploy using stored service account JSON in a secret (fallback)
+  deploy-with-secret:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Firebase Tools
+        run: npm ci -g firebase-tools
+      - name: Write service account to disk (from secret)
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SA" > /tmp/firebase-sa.json
+          chmod 600 /tmp/firebase-sa.json
+      - name: Deploy (uses firebase-tools)
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/firebase-sa.json
+        run: |
+          npx firebase deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --token "$(cat /tmp/firebase-sa.json | jq -r .token 2>/dev/null || true)" || true
+        # Note: The firebase CLI typically expects a token or ADC. This step is a placeholder;
+        # adjust the deploy command to your needs (or use gcloud to impersonate the SA).
+
+  # Option B (recommended): OIDC -> impersonate service account in GCP
+  deploy-oidc:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      # Authenticate to GCP using workload identity federation
+      - name: Authenticate to GCP (OIDC)
+        uses: google-github-actions/auth@v1
+        with:
+          workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_ID/providers/PROVIDER_ID
+          service_account: projects/PROJECT_NUMBER/serviceAccounts/SA_NAME@PROJECT_ID.iam.gserviceaccount.com
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.FIREBASE_PROJECT_ID }}
+
+      - name: Install Firebase Tools
+        run: npm ci -g firebase-tools
+
+      - name: Deploy with gcloud/fb (OIDC)
+        run: |
+          # After OIDC auth and setup-gcloud, you can run gcloud or firebase commands.
+          # Example (may require enabling APIs and appropriate IAM bindings):
+          # gcloud config set project ${{ secrets.FIREBASE_PROJECT_ID }}
+          # firebase deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
+          echo "<!-- Replace with actual deploy commands once OIDC is configured in GCP -->"
+
+# NOTES:
+# - Replace PROJECT_NUMBER, POOL_ID, PROVIDER_ID and SA_NAME@PROJECT_ID with values from your GCP setup.
+# - To configure Workload Identity Federation in GCP, follow:
+#   https://cloud.google.com/iam/docs/workload-identity-federation
+# - After configuring, you do NOT need to store the service account JSON in GitHub.
