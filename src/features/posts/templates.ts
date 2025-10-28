@@ -1,0 +1,22 @@
+export const postTemplates = [
+"Hoy {hora} — {plato} en {negocio}. Precio Héroe {precio}. {pueblo} 🌿",
+"{plato} listo a {hora}. Precio Héroe {precio}. {negocio} · {pueblo} 💚",
+"Plan fácil: {plato} · {hora} · {precio} en {negocio} ({pueblo})",
+"Antojo: {plato} a las {hora}. {precio} en {negocio} ({pueblo}) 😋",
+"Últimas unidades de {plato} hoy {hora}. {precio}. {negocio}",
+"{plato} rico y listo {hora} → {precio} en {negocio} ({pueblo})",
+"¡Héroe! {plato} a {hora} por {precio}. Gracias por salvar comida ♻️",
+"De camino: {plato}, {hora}, {precio}. {negocio}, {pueblo}",
+"Aviso: {plato}, hoy {hora}. {precio}. En {negocio}",
+"Directo y bueno: {plato} a {hora} por {precio} en {negocio}",
+"{pueblo}, hoy {plato} a {hora}. {precio}. {negocio}",
+"Comida rápida: {plato} {hora}, {precio}. {negocio} te espera",
+"Tarde fácil: {plato}, {hora}, {precio}. {negocio} ({pueblo})",
+"Héroes del planeta: {plato} a {hora} por {precio}. {negocio} 🌎",
+"Última llamada: {plato} hoy {hora}. {precio} en {negocio}",
+"Sabe a casa: {plato}, {hora}, {precio}. {negocio} ({pueblo})",
+"Sin líos: {plato} a {hora}. {precio}. {negocio}",
+"Rico y barato: {plato} → {hora} → {precio} → {negocio}",
+"Hoy comemos bien: {plato}, {hora}, {precio} en {negocio} ({pueblo})",
+"Gracias por salvar comida: {plato} {hora}. {precio}. {negocio} 💚"
+];
